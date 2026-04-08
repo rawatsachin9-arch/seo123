@@ -27,7 +27,9 @@ export default function Home(){
       <button onClick={generate}>Generate</button>
 
       {pages.map(p=>(
-        <div key={p.slug}>{p.title}</div>
+        <div key={p.slug} style={{padding:"8px 0", borderBottom:"1px solid #eee"}}>
+          <a href={`/page/${p.slug}`}>{p.title}</a>
+        </div>
       ))}
     </div>
   )

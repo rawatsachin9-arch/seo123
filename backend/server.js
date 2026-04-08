@@ -20,6 +20,13 @@ app.get("/pages", async (req,res)=>{
   res.json(pages);
 });
 
+app.get("/page/*", async (req, res) => {
+  const slug = req.params[0];
+  const page = await Page.findOne({ slug });
+  if (!page) return res.status(404).json({ error: "Not found" });
+  res.json(page);
+});
+
 app.post("/generate", async (req, res) => {
   const { airline, keyword } = req.body;
 
