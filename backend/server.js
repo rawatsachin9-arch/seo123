@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
+const axios = require("axios");
 require("dotenv").config();
 
 const Page = require("./models/Page");
@@ -80,6 +81,37 @@ app.get("/sitemap.xml", async (req, res) => {
 
   res.header("Content-Type", "application/xml");
   res.send(`<?xml version="1.0"?><urlset>${urls}</urlset>`);
+});
+
+app.get("/rank-check", async (req, res) => {
+  const { keyword, slug } = req.query;
+  const GCSE_KEY = process.env.GOOGLE_CSE_KEY;
+  const GCSE_CX  = process.env.GOOGLE_CSE_CX;
+  const pageUrl  = `https://skyairlinetickets.com/page/${slug}`;
+
+  if (!GCSE_KEY || !GCSE_CX) {
+    return res.json({ rank: null, indexed: null, error: "Google CSE not configured" });
+  }
+
+  try {
+    // Check ranking for the keyword
+    const rankRes = await axios.get("https://www.googleapis.com/customsearch/v1", {
+      params: { key: GCSE_KEY, cx: GCSE_CX, q: keyword, num: 10 }
+    });
+    const items = rankRes.data.items || [];
+    const rankPosition = items.findIndex(item => item.link.includes(slug));
+    const rank = rankPosition >= 0 ? rankPosition + 1 : null;
+
+    // Check if page is indexed via site: search
+    const indexRes = await axios.get("https://www.googleapis.com/customsearch/v1", {
+      params: { key: GCSE_KEY, cx: GCSE_CX, q: `site:${pageUrl}`, num: 1 }
+    });
+    const indexed = (indexRes.data.searchInformation?.totalResults || "0") !== "0";
+
+    res.json({ rank, indexed });
+  } catch (e) {
+    res.json({ rank: null, indexed: null, error: e.message });
+  }
 });
 
 app.post("/login", (req, res) => {
