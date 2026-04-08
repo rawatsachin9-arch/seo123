@@ -62,7 +62,7 @@ app.get("/sitemap.xml", async (req, res) => {
   const pages = await Page.find();
 
   const urls = pages.map(p =>
-    `<url><loc>https://yourdomain.com/page/${p.slug}</loc></url>`
+    `<url><loc>https://skyairlinetickets.com/page/${p.slug}</loc></url>`
   ).join("");
 
   res.header("Content-Type", "application/xml");

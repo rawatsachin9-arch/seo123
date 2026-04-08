@@ -7,12 +7,12 @@ export default function Home(){
   const [keyword,setKeyword]=useState("");
 
   const load=async()=>{
-    const res=await axios.get("http://localhost:4000/pages");
+    const res=await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/pages`);
     setPages(res.data);
   }
 
   const generate=async()=>{
-    await axios.post("http://localhost:4000/generate",{airline,keyword});
+    await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/generate`,{airline,keyword});
     load();
   }
 
