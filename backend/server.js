@@ -27,6 +27,12 @@ app.get("/page/*", async (req, res) => {
   res.json(page);
 });
 
+app.delete("/page/*", async (req, res) => {
+  const slug = req.params[0];
+  await Page.deleteOne({ slug });
+  res.json({ success: true });
+});
+
 app.post("/generate", async (req, res) => {
   const { airline, keyword } = req.body;
 
