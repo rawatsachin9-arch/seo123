@@ -48,17 +48,7 @@ app.post("/generate", async (req, res) => {
     existingPages
   );
 
-  const callCTA = `
-<div style="background:#ffcc00;padding:15px;text-align:center;">
-  <h2>📞 Talk to a Live Agent Now</h2>
-  <p>24/7 Support Available – No Wait</p>
-  <a href="tel:+18889185556" style="background:red;color:white;padding:10px 20px;text-decoration:none;">
-    Call Now: 1-888-918-5556
-  </a>
-</div>
-`;
-
-  const finalContent = callCTA + aiContent + callCTA + "<h3>Related Pages</h3>" + links;
+  const finalContent = `<div class="intro"><p>${page?.meta || ""}</p></div>` + aiContent + `<div class="internal-links"><h3>Related Pages</h3>${links}</div>`;
 
   const page = await Page.create({
     airline,
