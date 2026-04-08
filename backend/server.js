@@ -82,5 +82,15 @@ app.get("/sitemap.xml", async (req, res) => {
   res.send(`<?xml version="1.0"?><urlset>${urls}</urlset>`);
 });
 
+app.post("/login", (req, res) => {
+  const { email, password } = req.body;
+  const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "rawatsachin9@gmail.com";
+  const ADMIN_PASS  = process.env.ADMIN_PASS  || "Farebulk@123$";
+  if (email === ADMIN_EMAIL && password === ADMIN_PASS) {
+    return res.json({ success: true, token: "admin-secret-token" });
+  }
+  res.status(401).json({ success: false, message: "Invalid credentials" });
+});
+
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, ()=>console.log(`Backend running on port ${PORT}`));

@@ -1,10 +1,27 @@
 import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import axios from "axios";
 
 export default function Admin() {
+  const router = useRouter();
   const [pages, setPages] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [authed, setAuthed] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem("admin_token");
+    if (!token) {
+      router.replace("/login");
+    } else {
+      setAuthed(true);
+    }
+  }, []);
+
+  const logout = () => {
+    localStorage.removeItem("admin_token");
+    router.replace("/login");
+  };
 
   const load = async () => {
     setLoading(true);
@@ -26,9 +43,14 @@ export default function Admin() {
     p.airline.toLowerCase().includes(search.toLowerCase())
   );
 
+  if (!authed) return null;
+
   return (
     <div style={{ fontFamily: "sans-serif", padding: 40, maxWidth: 1000, margin: "0 auto" }}>
-      <h1>🛠️ Admin Panel</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <h1 style={{ margin: 0 }}>🛠️ Admin Panel</h1>
+        <button onClick={logout} style={{ background: "#333", color: "#fff", border: "none", padding: "8px 16px", borderRadius: 6, cursor: "pointer" }}>Logout</button>
+      </div>
       <p>Total Pages: <strong>{pages.length}</strong></p>
 
       <input
