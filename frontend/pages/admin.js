@@ -51,10 +51,24 @@ export default function Admin() {
     }
   };
 
+  const [bingStatus, setBingStatus] = useState("");
+
+  const submitToBing = async () => {
+    setBingStatus("submitting");
+    try {
+      const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/indexnow`);
+      if (res.data.success) setBingStatus(`✅ Submitted ${res.data.submitted} URLs to Bing!`);
+      else setBingStatus(`❌ ${res.data.error}`);
+    } catch {
+      setBingStatus("❌ Failed to submit");
+    }
+    setTimeout(() => setBingStatus(""), 6000);
+  };
+
   const checkAllSEO = async () => {
     for (const p of filtered) {
       await checkSEO(p);
-      await new Promise(r => setTimeout(r, 400)); // slight delay to avoid rate limits
+      await new Promise(r => setTimeout(r, 400));
     }
   };
 
@@ -104,7 +118,15 @@ export default function Admin() {
         <button onClick={checkAllSEO} style={{ background: "#0070f3", color: "#fff", border: "none", padding: "8px 18px", borderRadius: 8, cursor: "pointer", fontWeight: "bold", fontSize: 14 }}>
           🔍 Check All Rank &amp; Index
         </button>
+        <button onClick={submitToBing} disabled={bingStatus === "submitting"} style={{ background: "#008272", color: "#fff", border: "none", padding: "8px 18px", borderRadius: 8, cursor: "pointer", fontWeight: "bold", fontSize: 14 }}>
+          {bingStatus === "submitting" ? "⏳ Submitting…" : "🔎 Submit All to Bing"}
+        </button>
       </div>
+      {bingStatus && bingStatus !== "submitting" && (
+        <div style={{ background: bingStatus.startsWith("✅") ? "#d4edda" : "#f8d7da", color: bingStatus.startsWith("✅") ? "#155724" : "#721c24", padding: "10px 16px", borderRadius: 8, marginBottom: 14, fontSize: 14 }}>
+          {bingStatus}
+        </div>
+      )}
 
       {loading ? <p>Loading...</p> : (
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>

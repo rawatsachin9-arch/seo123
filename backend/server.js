@@ -114,6 +114,27 @@ app.get("/rank-check", async (req, res) => {
   }
 });
 
+app.post("/indexnow", async (req, res) => {
+  const key = process.env.INDEXNOW_KEY;
+  if (!key) return res.status(400).json({ error: "INDEXNOW_KEY not set in .env" });
+
+  const pages = await Page.find({}, "slug");
+  const urls = pages.map(p => `https://skyairlinetickets.com/page/${p.slug}`);
+
+  try {
+    const response = await axios.post("https://api.indexnow.org/indexnow", {
+      host: "skyairlinetickets.com",
+      key,
+      keyLocation: `https://skyairlinetickets.com/${key}.txt`,
+      urlList: urls
+    }, { headers: { "Content-Type": "application/json" } });
+
+    res.json({ success: true, submitted: urls.length, status: response.status });
+  } catch (e) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
 app.post("/login", (req, res) => {
   const { email, password } = req.body;
   const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "rawatsachin9@gmail.com";
