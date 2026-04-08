@@ -1,22 +1,23 @@
 import axios from "axios";
 import Head from "next/head";
 
-// Airline → Unsplash image keyword mapping
-const airlineImages = {
-  "American Airlines": "american-airlines-plane",
-  "Delta Airlines": "delta-airplane",
-  "United Airlines": "united-airlines",
-  "Southwest Airlines": "southwest-airplane",
-  "Spirit Airlines": "spirit-airlines",
-  "Frontier Airlines": "frontier-airlines",
-  "JetBlue": "jetblue-airplane",
-  "Alaska Airlines": "alaska-airlines",
-};
+// Curated Pexels airplane/travel images (free, stable URLs)
+const heroImages = [
+  "https://images.pexels.com/photos/358319/pexels-photo-358319.jpeg?auto=compress&cs=tinysrgb&w=1200&h=400&fit=crop",
+  "https://images.pexels.com/photos/912050/pexels-photo-912050.jpeg?auto=compress&cs=tinysrgb&w=1200&h=400&fit=crop",
+  "https://images.pexels.com/photos/62623/wing-plane-flying-airplane-62623.jpeg?auto=compress&cs=tinysrgb&w=1200&h=400&fit=crop",
+  "https://images.pexels.com/photos/1430676/pexels-photo-1430676.jpeg?auto=compress&cs=tinysrgb&w=1200&h=400&fit=crop",
+  "https://images.pexels.com/photos/723240/pexels-photo-723240.jpeg?auto=compress&cs=tinysrgb&w=1200&h=400&fit=crop",
+  "https://images.pexels.com/photos/2026324/pexels-photo-2026324.jpeg?auto=compress&cs=tinysrgb&w=1200&h=400&fit=crop",
+  "https://images.pexels.com/photos/46148/aircraft-jet-landing-cloud-46148.jpeg?auto=compress&cs=tinysrgb&w=1200&h=400&fit=crop",
+  "https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=1200&h=400&fit=crop",
+];
 
 function getHeroImage(airline) {
-  const query = airlineImages[airline] || "airplane airport travel";
-  // Unsplash Source — free, no API key needed
-  return `https://source.unsplash.com/1200x400/?${encodeURIComponent(query)},airplane`;
+  // Pick a consistent image per airline using a simple hash
+  let hash = 0;
+  for (let i = 0; i < airline.length; i++) hash += airline.charCodeAt(i);
+  return heroImages[hash % heroImages.length];
 }
 
 export default function PageView({ page }) {
