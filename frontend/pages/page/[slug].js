@@ -1,6 +1,12 @@
 import axios from "axios";
 import Head from "next/head";
 
+const API = process.env.NEXT_PUBLIC_API_URL;
+
+function trackCall(slug) {
+  try { axios.post(`${API}/track-call/${slug}`); } catch {}
+}
+
 // Curated Pexels airplane/travel images (free, stable URLs)
 const heroImages = [
   "https://images.pexels.com/photos/358319/pexels-photo-358319.jpeg?auto=compress&cs=tinysrgb&w=1200&h=400&fit=crop",
@@ -83,7 +89,7 @@ export default function PageView({ page }) {
       {/* Top CTA Bar */}
       <div className="cta-bar">
         📞 Speak to a Live Agent Now — No Hold Time!
-        <a href="tel:+18889185556">Call 1-888-918-5556</a>
+        <a href="tel:+18889185556" onClick={() => trackCall(page.slug)}>Call 1-888-918-5556</a>
       </div>
 
       {/* Trust Signals */}
@@ -103,7 +109,7 @@ export default function PageView({ page }) {
         <div className="cta-bottom">
           <h2>Need Help? We&apos;re Here 24/7</h2>
           <p>Our travel experts are ready to assist you right now — no waiting, no hassle.</p>
-          <a href="tel:+18889185556">📞 Call 1-888-918-5556</a>
+          <a href="tel:+18889185556" onClick={() => trackCall(page.slug)}>📞 Call 1-888-918-5556</a>
         </div>
       </div>
     </>

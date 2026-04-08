@@ -23,9 +23,19 @@ app.get("/pages", async (req,res)=>{
 
 app.get("/page/*", async (req, res) => {
   const slug = req.params[0];
-  const page = await Page.findOne({ slug });
+  const page = await Page.findOneAndUpdate(
+    { slug },
+    { $inc: { pageViews: 1 } },
+    { new: true }
+  );
   if (!page) return res.status(404).json({ error: "Not found" });
   res.json(page);
+});
+
+app.post("/track-call/*", async (req, res) => {
+  const slug = req.params[0];
+  await Page.findOneAndUpdate({ slug }, { $inc: { callClicks: 1 } });
+  res.json({ success: true });
 });
 
 app.delete("/page/*", async (req, res) => {

@@ -73,7 +73,19 @@ export default function Admin() {
         <h1 style={{ margin: 0 }}>🛠️ Admin Panel</h1>
         <button onClick={logout} style={{ background: "#333", color: "#fff", border: "none", padding: "8px 16px", borderRadius: 6, cursor: "pointer" }}>Logout</button>
       </div>
-      <p>Total Pages: <strong>{pages.length}</strong></p>
+      <div style={{ display: "flex", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>
+        {[
+          { label: "Total Pages", value: pages.length, color: "#0070f3" },
+          { label: "Total Views", value: pages.reduce((s, p) => s + (p.pageViews || 0), 0), color: "#6f42c1" },
+          { label: "Total Calls", value: pages.reduce((s, p) => s + (p.callClicks || 0), 0), color: "#cc0000" },
+          { label: "Avg Conv %", value: (() => { const v = pages.reduce((s,p)=>s+(p.pageViews||0),0); const c = pages.reduce((s,p)=>s+(p.callClicks||0),0); return v > 0 ? (c/v*100).toFixed(1)+"%" : "—"; })(), color: "#28a745" },
+        ].map(s => (
+          <div key={s.label} style={{ background: "#fff", border: `2px solid ${s.color}`, borderRadius: 10, padding: "14px 24px", minWidth: 130, textAlign: "center" }}>
+            <div style={{ fontSize: 22, fontWeight: "bold", color: s.color }}>{s.value}</div>
+            <div style={{ fontSize: 12, color: "#666", marginTop: 2 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
 
       {!cseConfigured && (
         <div style={{ background: "#fff3cd", border: "1px solid #ffc107", borderRadius: 8, padding: "12px 16px", marginBottom: 16, fontSize: 13 }}>
@@ -101,6 +113,9 @@ export default function Admin() {
               <th style={th}>#</th>
               <th style={th}>Title</th>
               <th style={th}>Airline</th>
+              <th style={th}>👁 Views</th>
+              <th style={th}>📞 Calls</th>
+              <th style={th}>Conv %</th>
               <th style={th}>Indexed?</th>
               <th style={th}>Rank (top 10)</th>
               <th style={th}>Actions</th>
@@ -118,6 +133,15 @@ export default function Admin() {
                     <div style={{ fontSize: 10, color: "#aaa", marginTop: 2 }}>{p.slug}</div>
                   </td>
                   <td style={td}>{p.airline}</td>
+                  <td style={{ ...td, textAlign: "center" }}>
+                    <span style={badge("gray")}>{p.pageViews || 0}</span>
+                  </td>
+                  <td style={{ ...td, textAlign: "center" }}>
+                    <span style={badge(p.callClicks > 0 ? "green" : "gray")}>{p.callClicks || 0}</span>
+                  </td>
+                  <td style={{ ...td, textAlign: "center", fontSize: 12 }}>
+                    {p.pageViews > 0 ? `${((p.callClicks || 0) / p.pageViews * 100).toFixed(1)}%` : "—"}
+                  </td>
                   <td style={td}>
                     {seo?.checking ? <span style={badge("gray")}>⏳ Checking…</span>
                       : seo?.indexed === true  ? <span style={badge("green")}>✅ Indexed</span>
