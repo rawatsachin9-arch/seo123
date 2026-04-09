@@ -76,11 +76,11 @@ app.get("/sitemap.xml", async (req, res) => {
   const pages = await Page.find();
 
   const urls = pages.map(p =>
-    `<url><loc>https://skyairlinetickets.com/page/${p.slug}</loc></url>`
+    `<url><loc>https://skyairlinetickets.com/page/${p.slug}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>`
   ).join("");
 
-  res.header("Content-Type", "application/xml");
-  res.send(`<?xml version="1.0"?><urlset>${urls}</urlset>`);
+  res.header("Content-Type", "application/xml; charset=utf-8");
+  res.send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`);
 });
 
 app.get("/rank-check", async (req, res) => {
@@ -139,16 +139,20 @@ app.post("/indexnow", async (req, res) => {
   const urls = pages.map(p => `https://skyairlinetickets.com/page/${p.slug}`);
 
   try {
-    const response = await axios.post("https://api.indexnow.org/indexnow", {
+    const response = await axios.post("https://www.bing.com/indexnow", {
       host: "skyairlinetickets.com",
       key,
       keyLocation: `https://skyairlinetickets.com/${key}.txt`,
       urlList: urls
-    }, { headers: { "Content-Type": "application/json" } });
+    }, {
+      headers: { "Content-Type": "application/json; charset=utf-8" },
+      timeout: 15000
+    });
 
     res.json({ success: true, submitted: urls.length, status: response.status });
   } catch (e) {
-    res.json({ success: false, error: e.message });
+    const errDetail = e.response ? `HTTP ${e.response.status}: ${JSON.stringify(e.response.data)}` : e.message;
+    res.json({ success: false, error: errDetail });
   }
 });
 
