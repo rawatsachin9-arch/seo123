@@ -211,13 +211,34 @@ app.post("/indexnow", async (req, res) => {
   }
 });
 
+// Global stop flag for bulk generation
+let bulkStop = false;
+
+app.post("/bulk-stop", (req, res) => {
+  bulkStop = true;
+  res.json({ success: true, message: "Stop signal sent" });
+});
+
+app.get("/bulk-status", (req, res) => {
+  res.json({ running: global.bulkRunning || false, done: global.bulkDone || 0, total: global.bulkTotal || 0 });
+});
+
 app.post("/generate-all", async (req, res) => {
-  const { country = "United States", city = null } = req.body;
-  const airlines = require("../data/airlines.json");
+  const {
+    country = "United States",
+    city = null,
+    customAirlines = [],   // extra airlines from user
+    limit = 0             // 0 = no limit
+  } = req.body;
+
+  const defaultAirlines = require("../data/airlines.json");
   const keywords = require("../data/keywords.json");
 
+  // Merge default + custom, deduplicate
+  const allAirlines = [...new Set([...defaultAirlines, ...customAirlines.map(a => a.trim()).filter(Boolean)])];
+
   const pairs = [];
-  for (const airline of airlines) {
+  for (const airline of allAirlines) {
     for (const keyword of keywords) {
       const slug = `airlines/${airline.toLowerCase().replace(/\s+/g, "-")}/${keyword.toLowerCase().replace(/\s+/g, "-")}`;
       const exists = await Page.findOne({ slug });
@@ -225,16 +246,23 @@ app.post("/generate-all", async (req, res) => {
     }
   }
 
-  if (pairs.length === 0) return res.json({ message: "All pages already exist", generated: 0 });
+  if (pairs.length === 0) return res.json({ message: "All pages already exist", generated: 0, total: 0 });
 
+  const toGenerate = limit > 0 ? pairs.slice(0, limit) : pairs;
   const targetCity = city || (country === "United States" ? "New York" : country === "United Kingdom" ? "London" : country === "UAE" ? "Dubai" : country === "Australia" ? "Sydney" : country === "Canada" ? "Toronto" : "Berlin");
 
-  res.json({ message: `Queued ${pairs.length} pages for ${targetCity}, ${country}`, total: pairs.length });
+  bulkStop = false;
+  global.bulkRunning = true;
+  global.bulkDone = 0;
+  global.bulkTotal = toGenerate.length;
+
+  res.json({ message: `Queued ${toGenerate.length} pages for ${targetCity}, ${country}`, total: toGenerate.length });
 
   (async () => {
     const generateLinks = require("./utils/internalLinks");
     let done = 0;
-    for (const { airline, keyword, slug } of pairs) {
+    for (const { airline, keyword, slug } of toGenerate) {
+      if (bulkStop) { console.log("Bulk generation stopped by user."); break; }
       try {
         const existingPages = await Page.find({}, "airline slug");
         const meta = `Get help with ${airline} ${keyword} in ${targetCity}, ${country} — tips, steps, and FAQs.`;
@@ -246,13 +274,15 @@ app.post("/generate-all", async (req, res) => {
           meta, content: aiContent + `<div class="internal-links"><h3>Related Pages</h3>${links}</div>`
         });
         done++;
-        console.log(`Bulk [${done}/${pairs.length}]: ${slug} (${targetCity}, ${country})`);
+        global.bulkDone = done;
+        console.log(`Bulk [${done}/${toGenerate.length}]: ${slug}`);
       } catch (e) {
         console.error(`Bulk failed ${slug}:`, e.message);
       }
       await new Promise(r => setTimeout(r, 3000));
     }
-    console.log(`Bulk generation complete: ${done}/${pairs.length}`);
+    global.bulkRunning = false;
+    console.log(`Bulk done: ${done}/${toGenerate.length}`);
   })();
 });
 

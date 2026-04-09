@@ -1,280 +1,169 @@
-import { useState, useEffect, useRef } from "react";
-import axios from "axios";
-
-const TARGET_MARKETS = {
-  "United States": ["New York", "Los Angeles", "Chicago", "Houston", "Miami", "Dallas", "Atlanta", "San Francisco", "Las Vegas", "Boston"],
-  "Canada":         ["Toronto", "Vancouver", "Montreal", "Calgary", "Ottawa", "Edmonton", "Winnipeg", "Quebec City"],
-  "United Kingdom": ["London", "Manchester", "Birmingham", "Glasgow", "Edinburgh", "Liverpool", "Bristol", "Leeds"],
-  "UAE":            ["Dubai", "Abu Dhabi", "Sharjah", "Ajman", "Ras Al Khaimah"],
-  "Australia":      ["Sydney", "Melbourne", "Brisbane", "Perth", "Adelaide", "Gold Coast", "Canberra"],
-  "Germany":        ["Berlin", "Munich", "Hamburg", "Frankfurt", "Cologne", "Stuttgart"],
-  "France":         ["Paris", "Lyon", "Marseille", "Toulouse", "Nice", "Bordeaux"],
-  "Italy":          ["Rome", "Milan", "Naples", "Turin", "Florence", "Venice"],
-  "Spain":          ["Madrid", "Barcelona", "Seville", "Valencia", "Bilbao", "Malaga"],
-  "Netherlands":    ["Amsterdam", "Rotterdam", "The Hague", "Utrecht", "Eindhoven"],
-};
-
-const DEFAULT_AIRLINES = [
-  "Delta Airlines","United Airlines","American Airlines","Southwest Airlines",
-  "Spirit Airlines","Frontier Airlines","JetBlue Airways","Alaska Airlines",
-  "Allegiant Air","Sun Country Airlines"
-];
+import Head from "next/head";
 
 export default function Home() {
-  const [pages, setPages] = useState([]);
-  const [airline, setAirline] = useState("");
-  const [keyword, setKeyword] = useState("");
-  const [country, setCountry] = useState("United States");
-  const [city, setCity] = useState("New York");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
-  // Bulk state
-  const [bulkCountry, setBulkCountry] = useState("United States");
-  const [bulkCity, setBulkCity] = useState("");
-  const [bulkLoading, setBulkLoading] = useState(false);
-  const [bulkProgress, setBulkProgress] = useState(null); // { done, total }
-  const [customAirlineInput, setCustomAirlineInput] = useState("");
-  const [customAirlines, setCustomAirlines] = useState([]);
-  const [pageLimit, setPageLimit] = useState(""); // empty = no limit
-  const pollRef = useRef(null);
-
-  const cities = TARGET_MARKETS[country] || [];
-  const bulkCities = TARGET_MARKETS[bulkCountry] || [];
-
-  const allAirlines = [...new Set([...DEFAULT_AIRLINES, ...customAirlines])];
-  const keywordsCount = 10;
-  const totalPossible = allAirlines.length * keywordsCount;
-  const willGenerate = pageLimit ? Math.min(parseInt(pageLimit) || 0, totalPossible) : totalPossible;
-
-  const load = async () => {
-    try {
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/pages`);
-      setPages(res.data);
-    } catch (e) { console.error(e.message); }
-  };
-
-  const addAirline = () => {
-    const name = customAirlineInput.trim();
-    if (!name) return;
-    if (!customAirlines.includes(name) && !DEFAULT_AIRLINES.includes(name)) {
-      setCustomAirlines(prev => [...prev, name]);
-    }
-    setCustomAirlineInput("");
-  };
-
-  const removeAirline = (name) => setCustomAirlines(prev => prev.filter(a => a !== name));
-
-  const startPoll = () => {
-    if (pollRef.current) clearInterval(pollRef.current);
-    pollRef.current = setInterval(async () => {
-      try {
-        const s = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/bulk-status`);
-        setBulkProgress({ done: s.data.done, total: s.data.total });
-        load();
-        if (!s.data.running) {
-          clearInterval(pollRef.current);
-          setBulkLoading(false);
-          setSuccess(`✅ Generation complete! ${s.data.done}/${s.data.total} pages created.`);
-        }
-      } catch {}
-    }, 5000);
-  };
-
-  const generateAll = async () => {
-    setBulkLoading(true); setError(""); setSuccess(""); setBulkProgress(null);
-    try {
-      const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/generate-all`, {
-        country: bulkCountry,
-        city: bulkCity || null,
-        customAirlines,
-        limit: pageLimit ? parseInt(pageLimit) : 0
-      });
-      setBulkProgress({ done: 0, total: res.data.total });
-      setSuccess(`🚀 ${res.data.message}`);
-      startPoll();
-    } catch (e) {
-      setError(`❌ ${e.response?.data?.error || e.message}`);
-      setBulkLoading(false);
-    }
-  };
-
-  const stopGeneration = async () => {
-    try {
-      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/bulk-stop`);
-      setSuccess("⛔ Stop signal sent — generation will stop after current page.");
-      if (pollRef.current) clearInterval(pollRef.current);
-      setBulkLoading(false);
-    } catch {}
-  };
-
-  const generate = async () => {
-    if (!airline.trim() || !keyword.trim()) { setError("Please enter both airline and keyword."); return; }
-    setLoading(true); setError(""); setSuccess("");
-    try {
-      const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/generate`, { airline, keyword, country, city });
-      setSuccess(`✅ Page generated: ${res.data.title} (targeting ${city}, ${country})`);
-      load();
-    } catch (e) {
-      setError(`❌ ${e.response?.data?.error || e.message}`);
-    } finally { setLoading(false); }
-  };
-
-  useEffect(() => { load(); return () => { if (pollRef.current) clearInterval(pollRef.current); }; }, []);
-
-  const inp = { padding: "9px 12px", fontSize: 14, border: "1px solid #ddd", borderRadius: 6, background: "#fff", width: "100%", boxSizing: "border-box" };
-  const card = { background: "#fff", border: "1px solid #e0e0e0", borderRadius: 10, padding: 24, marginBottom: 20 };
-
   return (
-    <div style={{ padding: "32px 40px", fontFamily: "'Segoe UI', sans-serif", maxWidth: 960, margin: "0 auto" }}>
-      <h1 style={{ margin: "0 0 4px", fontSize: 24 }}>✈️ SEO Tool Dashboard</h1>
-      <p style={{ margin: "0 0 28px", color: "#888", fontSize: 13 }}>{pages.length} pages in database</p>
+    <>
+      <Head>
+        <title>Sky Airline Tickets | Cheap Flights & Airline Reservations</title>
+        <meta name="description" content="Book cheap airline tickets and manage your flight reservations with Sky Airline Tickets. 24/7 live agents for US, UK, Canada, UAE, Australia travelers." />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://skyairlinetickets.com" />
+        <meta property="og:title" content="Sky Airline Tickets | Cheap Flights & Airline Reservations" />
+        <meta property="og:description" content="Book flights with major airlines. 24/7 live agent support. Best price guarantee." />
+        <meta property="og:url" content="https://skyairlinetickets.com" />
+        <meta property="og:type" content="website" />
+        <meta name="geo.region" content="US, GB, CA, AU, AE" />
+        <link rel="alternate" hrefLang="en-us" href="https://skyairlinetickets.com" />
+        <link rel="alternate" hrefLang="en-gb" href="https://skyairlinetickets.com" />
+        <link rel="alternate" hrefLang="en-ca" href="https://skyairlinetickets.com" />
+        <link rel="alternate" hrefLang="en-au" href="https://skyairlinetickets.com" />
+        <link rel="alternate" hrefLang="x-default" href="https://skyairlinetickets.com" />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "TravelAgency",
+          "name": "Sky Airline Tickets",
+          "url": "https://skyairlinetickets.com",
+          "telephone": "+18889185556",
+          "description": "Airline ticket booking and travel support for US, UK, Canada, UAE and Australia travelers.",
+          "areaServed": ["US", "GB", "CA", "AU", "AE"],
+          "availableLanguage": "English"
+        })}} />
+      </Head>
 
-      {/* ── Single Page ── */}
-      <div style={card}>
-        <h2 style={{ margin: "0 0 16px", fontSize: 16, color: "#333" }}>📄 Generate Single Page</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-          <input placeholder="Airline (e.g. Delta Airlines)" value={airline} onChange={e => setAirline(e.target.value)} style={inp} />
-          <input placeholder="Keyword (e.g. flight cancellation)" value={keyword} onChange={e => setKeyword(e.target.value)} style={inp} />
-          <select value={country} onChange={e => { setCountry(e.target.value); setCity(TARGET_MARKETS[e.target.value]?.[0] || ""); }} style={inp}>
-            {Object.keys(TARGET_MARKETS).map(c => <option key={c}>{c}</option>)}
-          </select>
-          <select value={city} onChange={e => setCity(e.target.value)} style={inp}>
-            {cities.map(c => <option key={c}>{c}</option>)}
-          </select>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <button onClick={generate} disabled={loading}
-            style={{ padding: "10px 28px", fontSize: 14, background: loading ? "#aaa" : "#0070f3", color: "#fff", border: "none", borderRadius: 6, cursor: loading ? "not-allowed" : "pointer", fontWeight: 600 }}>
-            {loading ? "Generating…" : "Generate Page"}
-          </button>
-          <span style={{ fontSize: 13, color: "#555" }}>📍 <strong>{city}, {country}</strong></span>
+      <style>{`
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; color: #222; }
+        a { text-decoration: none; }
+        .nav { background: #00205b; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; height: 64px; }
+        .nav-logo { color: #fff; font-size: 1.4rem; font-weight: 800; }
+        .nav-logo span { color: #f0a500; }
+        .nav-phone { color: #fff; font-size: 0.95rem; display: flex; align-items: center; gap: 8px; }
+        .nav-phone a { color: #f0a500; font-weight: 700; font-size: 1.1rem; }
+        .hero { background: linear-gradient(135deg, #00205b 0%, #003580 50%, #0055aa 100%); color: #fff; padding: 80px 40px 60px; text-align: center; position: relative; overflow: hidden; }
+        .hero::before { content: "✈"; position: absolute; font-size: 300px; opacity: 0.04; top: -60px; right: -40px; }
+        .hero h1 { font-size: 2.8rem; font-weight: 800; margin-bottom: 16px; line-height: 1.2; }
+        .hero h1 span { color: #f0a500; }
+        .hero p { font-size: 1.15rem; opacity: 0.9; max-width: 600px; margin: 0 auto 32px; }
+        .hero-cta { display: inline-flex; align-items: center; gap: 10px; background: #cc0000; color: #fff; padding: 18px 40px; border-radius: 50px; font-size: 1.2rem; font-weight: 700; }
+        .hero-cta:hover { background: #aa0000; }
+        .hero-sub { margin-top: 18px; font-size: 0.9rem; opacity: 0.7; }
+        .trust { background: #f0a500; padding: 14px 40px; display: flex; justify-content: center; gap: 40px; flex-wrap: wrap; }
+        .trust span { font-size: 13px; font-weight: 600; color: #00205b; display: flex; align-items: center; gap: 6px; }
+        .section { padding: 60px 40px; max-width: 1100px; margin: 0 auto; }
+        .section-title { text-align: center; font-size: 1.8rem; font-weight: 700; color: #00205b; margin-bottom: 8px; }
+        .section-sub { text-align: center; color: #666; margin-bottom: 40px; font-size: 0.95rem; }
+        .airlines-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+        .airline-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 20px 16px; text-align: center; transition: all 0.2s; }
+        .airline-card:hover { border-color: #00205b; box-shadow: 0 4px 16px rgba(0,32,91,0.1); transform: translateY(-2px); }
+        .airline-card .icon { font-size: 2rem; margin-bottom: 8px; }
+        .airline-card .name { font-size: 0.9rem; font-weight: 600; color: #333; }
+        .airline-card .num { font-size: 0.8rem; color: #cc0000; font-weight: 500; margin-top: 4px; }
+        .services-bg { background: #f8f9fb; }
+        .services-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+        .service-card { background: #fff; border-radius: 10px; padding: 28px 20px; text-align: center; border: 1px solid #eee; }
+        .service-card .sicon { font-size: 2.2rem; margin-bottom: 12px; }
+        .service-card h3 { font-size: 1rem; color: #00205b; margin-bottom: 6px; }
+        .service-card p { font-size: 0.85rem; color: #666; line-height: 1.6; }
+        .cta-band { background: #cc0000; color: #fff; text-align: center; padding: 50px 40px; }
+        .cta-band h2 { font-size: 2rem; margin-bottom: 12px; }
+        .cta-band p { font-size: 1rem; opacity: 0.9; margin-bottom: 24px; }
+        .cta-band a { background: #fff; color: #cc0000; padding: 16px 44px; border-radius: 50px; font-weight: 700; font-size: 1.15rem; display: inline-block; }
+        .disclaimer { background: #f5f5f5; border-top: 1px solid #ddd; padding: 32px 40px; }
+        .disclaimer p { font-size: 11.5px; color: #888; line-height: 1.7; max-width: 960px; margin: 0 auto; text-align: center; }
+        .footer { background: #00205b; color: #aaa; padding: 24px 40px; text-align: center; font-size: 13px; }
+        .footer a { color: #f0a500; margin: 0 8px; }
+        .sticky-call { position: fixed; bottom: 24px; right: 24px; background: #cc0000; color: #fff; border-radius: 50px; padding: 14px 24px; font-weight: 700; font-size: 1rem; box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 999; display: flex; align-items: center; gap: 8px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100%{box-shadow:0 4px 20px rgba(204,0,0,0.4)} 50%{box-shadow:0 4px 32px rgba(204,0,0,0.8)} }
+        @media(max-width:600px){ .hero h1{font-size:1.8rem} .nav{padding:0 20px} .trust{gap:16px} .section{padding:40px 20px} }
+        @keyframes pulse { 0%,100%{box-shadow:0 4px 20px rgba(204,0,0,0.4)} 50%{box-shadow:0 4px 32px rgba(204,0,0,0.8)} }
+      `}</style>
+
+      <nav className="nav">
+        <div className="nav-logo">Sky<span>Airline</span>Tickets</div>
+        <div className="nav-phone">📞 <a href="tel:+18889185556">1-888-918-5556</a> &nbsp;|&nbsp; 24/7 Support</div>
+      </nav>
+
+      <section className="hero">
+        <h1>Book Flights &amp; Manage<br /><span>Airline Reservations</span></h1>
+        <p>Get instant help with flight bookings, cancellations, changes, and more. Live travel agents available 24/7 for US, UK, Canada, UAE, and Australia travelers.</p>
+        <a href="tel:+18889185556" className="hero-cta">📞 Call Now: 1-888-918-5556</a>
+        <p className="hero-sub">Toll-free · No hold time · Instant assistance</p>
+      </section>
+
+      <div className="trust">
+        <span>✈️ All Major Airlines</span>
+        <span>🕐 24/7 Live Agents</span>
+        <span>🌍 US · UK · CA · UAE · AU</span>
+        <span>💳 Best Price Guarantee</span>
+        <span>🔒 Secure &amp; Trusted</span>
+        <span>⭐ 50,000+ Happy Travelers</span>
+      </div>
+
+      <div className="section">
+        <h2 className="section-title">Airlines We Support</h2>
+        <p className="section-sub">We provide booking and support for all major US and international carriers.</p>
+        <div className="airlines-grid">
+          {[
+            "Delta Airlines","United Airlines","American Airlines","Southwest Airlines",
+            "Spirit Airlines","JetBlue Airways","Alaska Airlines","Frontier Airlines",
+            "Allegiant Air","Sun Country Airlines"
+          ].map(name => (
+            <div key={name} className="airline-card">
+              <div className="icon">✈️</div>
+              <div className="name">{name}</div>
+              <div className="num">📞 1-888-918-5556</div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* ── Bulk Generator ── */}
-      <div style={card}>
-        <h2 style={{ margin: "0 0 6px", fontSize: 16, color: "#333" }}>⚡ Bulk Generate</h2>
-        <p style={{ margin: "0 0 16px", fontSize: 13, color: "#888" }}>Generates airline × keyword combinations. Add extra airlines, set a page limit, and stop anytime.</p>
-
-        {/* Target market */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
-          <div>
-            <label style={{ fontSize: 12, color: "#555", display: "block", marginBottom: 4 }}>Target Country</label>
-            <select value={bulkCountry} onChange={e => { setBulkCountry(e.target.value); setBulkCity(""); }} style={inp}>
-              {Object.keys(TARGET_MARKETS).map(c => <option key={c}>{c}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={{ fontSize: 12, color: "#555", display: "block", marginBottom: 4 }}>Target City</label>
-            <select value={bulkCity} onChange={e => setBulkCity(e.target.value)} style={inp}>
-              <option value="">— Country-level (auto) —</option>
-              {bulkCities.map(c => <option key={c}>{c}</option>)}
-            </select>
-          </div>
-        </div>
-
-        {/* Add custom airline */}
-        <div style={{ marginBottom: 14 }}>
-          <label style={{ fontSize: 12, color: "#555", display: "block", marginBottom: 4 }}>Add Custom Airline</label>
-          <div style={{ display: "flex", gap: 8 }}>
-            <input
-              placeholder="e.g. Air India, Emirates, Ryanair…"
-              value={customAirlineInput}
-              onChange={e => setCustomAirlineInput(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && addAirline()}
-              style={{ ...inp, flex: 1 }}
-            />
-            <button onClick={addAirline}
-              style={{ padding: "9px 20px", background: "#0070f3", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 14, whiteSpace: "nowrap" }}>
-              + Add
-            </button>
-          </div>
-          {customAirlines.length > 0 && (
-            <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {customAirlines.map(a => (
-                <span key={a} style={{ background: "#e8f4fd", border: "1px solid #bee3f8", borderRadius: 20, padding: "3px 12px", fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
-                  {a}
-                  <span onClick={() => removeAirline(a)} style={{ cursor: "pointer", color: "#e00", fontWeight: "bold", fontSize: 15, lineHeight: 1 }}>×</span>
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Page limit + count preview */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-          <div>
-            <label style={{ fontSize: 12, color: "#555", display: "block", marginBottom: 4 }}>Page Limit <span style={{ color: "#aaa" }}>(leave blank = generate all)</span></label>
-            <input
-              type="number" min="1" max="1000"
-              placeholder={`Max ${totalPossible} (${allAirlines.length} airlines × ${keywordsCount} keywords)`}
-              value={pageLimit}
-              onChange={e => setPageLimit(e.target.value)}
-              style={inp}
-            />
-          </div>
-          <div style={{ background: "#f0f7ff", border: "1px solid #bee3f8", borderRadius: 6, padding: "10px 16px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-            <span style={{ fontSize: 11, color: "#555" }}>Will generate</span>
-            <span style={{ fontSize: 28, fontWeight: 700, color: "#0070f3", lineHeight: 1.2 }}>{willGenerate}</span>
-            <span style={{ fontSize: 11, color: "#888" }}>{allAirlines.length} airlines × {keywordsCount} keywords{pageLimit ? ` (limited to ${pageLimit})` : ""}</span>
-          </div>
-        </div>
-
-        {/* Airlines list preview */}
-        <details style={{ marginBottom: 14 }}>
-          <summary style={{ fontSize: 13, color: "#555", cursor: "pointer" }}>📋 View all {allAirlines.length} airlines in queue</summary>
-          <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 5 }}>
-            {allAirlines.map(a => (
-              <span key={a} style={{ background: "#f5f5f5", border: "1px solid #e0e0e0", borderRadius: 4, padding: "2px 10px", fontSize: 12, color: "#444" }}>{a}</span>
+      <div className="services-bg">
+        <div className="section">
+          <h2 className="section-title">How We Help You</h2>
+          <p className="section-sub">Our agents handle everything — fast, easy, no hold time.</p>
+          <div className="services-grid">
+            {[
+              { icon: "🎫", title: "New Reservations", desc: "Book one-way, round-trip or multi-city flights at the best available fares." },
+              { icon: "🔄", title: "Flight Changes", desc: "Change your travel dates, times or destination quickly and hassle-free." },
+              { icon: "❌", title: "Cancellations", desc: "Cancel flights and get help understanding refund and credit policies." },
+              { icon: "💰", title: "Refund Requests", desc: "Track and expedite refund claims with direct airline support." },
+              { icon: "🧳", title: "Baggage Help", desc: "Resolve lost, delayed or damaged baggage issues with our agents." },
+              { icon: "💺", title: "Seat Upgrades", desc: "Request seat upgrades, extra legroom or premium cabin availability." },
+              { icon: "📋", title: "Name Corrections", desc: "Fix name errors on tickets before your flight quickly." },
+              { icon: "🌐", title: "Group Bookings", desc: "Book 10+ passengers at group rates with dedicated support." },
+            ].map(s => (
+              <div key={s.title} className="service-card">
+                <div className="sicon">{s.icon}</div>
+                <h3>{s.title}</h3>
+                <p>{s.desc}</p>
+              </div>
             ))}
           </div>
-        </details>
-
-        {/* Progress bar */}
-        {bulkProgress && (
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#555", marginBottom: 4 }}>
-              <span>Progress: {bulkProgress.done} / {bulkProgress.total} pages</span>
-              <span>{bulkProgress.total > 0 ? Math.round(bulkProgress.done / bulkProgress.total * 100) : 0}%</span>
-            </div>
-            <div style={{ background: "#e9ecef", borderRadius: 8, height: 10, overflow: "hidden" }}>
-              <div style={{ background: "#28a745", height: "100%", width: `${bulkProgress.total > 0 ? (bulkProgress.done / bulkProgress.total * 100) : 0}%`, transition: "width 0.5s" }} />
-            </div>
-            <div style={{ fontSize: 11, color: "#888", marginTop: 4 }}>~{Math.round((bulkProgress.total - bulkProgress.done) * 3 / 60)} min remaining</div>
-          </div>
-        )}
-
-        {/* Action buttons */}
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button onClick={generateAll} disabled={bulkLoading}
-            style={{ padding: "10px 28px", fontSize: 14, background: bulkLoading ? "#aaa" : "#28a745", color: "#fff", border: "none", borderRadius: 6, cursor: bulkLoading ? "not-allowed" : "pointer", fontWeight: 600 }}>
-            {bulkLoading ? `⏳ Generating… (${bulkProgress?.done || 0}/${bulkProgress?.total || "?"})` : `⚡ Start Bulk Generate (${willGenerate} pages)`}
-          </button>
-          {bulkLoading && (
-            <button onClick={stopGeneration}
-              style={{ padding: "10px 24px", fontSize: 14, background: "#dc3545", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600 }}>
-              ⛔ Stop Generation
-            </button>
-          )}
         </div>
       </div>
 
-      {error   && <div style={{ background: "#fff0f0", border: "1px solid #faa", padding: "10px 14px", borderRadius: 6, marginBottom: 12, color: "#c00", fontSize: 14 }}>{error}</div>}
-      {success && <div style={{ background: "#f0fff4", border: "1px solid #6c6", padding: "10px 14px", borderRadius: 6, marginBottom: 12, color: "#060", fontSize: 14 }}>{success}</div>}
-
-      {/* ── Pages List ── */}
-      <div style={card}>
-        <h2 style={{ margin: "0 0 12px", fontSize: 16, color: "#333" }}>📋 All Pages ({pages.length})</h2>
-        {pages.length === 0 && <p style={{ color: "#aaa", fontSize: 13 }}>No pages yet.</p>}
-        {pages.map(p => (
-          <div key={p.slug} style={{ padding: "8px 0", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <a href={`/page/${p.slug}`} target="_blank" rel="noreferrer" style={{ color: "#0070f3", fontSize: 14, textDecoration: "none" }}>{p.title}</a>
-            <span style={{ fontSize: 11, color: "#aaa" }}>{p.airline}</span>
-          </div>
-        ))}
+      <div className="cta-band">
+        <h2>Need Help Right Now?</h2>
+        <p>Our travel experts are standing by — no automated menus, no long waits.</p>
+        <a href="tel:+18889185556">📞 Call 1-888-918-5556</a>
       </div>
-    </div>
+
+      <div className="disclaimer">
+        <p>
+          <strong>Disclaimer:</strong> SkyAirlineTickets.com is an independent travel services company and is not affiliated with, endorsed by, or officially connected to Delta Airlines, United Airlines, American Airlines, Southwest Airlines, Spirit Airlines, JetBlue Airways, Alaska Airlines, Frontier Airlines, Allegiant Air, Sun Country Airlines, or any other airline or travel company. All airline names, logos, and trademarks are the property of their respective owners. We are a third-party booking and customer service provider. Fares, fees, and policies are subject to change without notice. Calling our number connects you to our independent travel agents. This website is for informational and booking assistance purposes only.
+        </p>
+      </div>
+
+      <footer className="footer">
+        <div>© {new Date().getFullYear()} SkyAirlineTickets.com · All rights reserved</div>
+        <div style={{ marginTop: 8 }}>
+          <a href="/page/airlines/delta-airlines/customer-service">Delta Help</a>
+          <a href="/page/airlines/united-airlines/customer-service">United Help</a>
+          <a href="/page/airlines/american-airlines/customer-service">American Help</a>
+        </div>
+      </footer>
+
+      <a href="tel:+18889185556" className="sticky-call">📞 Call Now</a>
+    </>
   );
 }

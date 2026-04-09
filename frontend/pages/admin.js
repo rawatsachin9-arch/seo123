@@ -97,7 +97,10 @@ export default function Admin() {
     <div style={{ fontFamily: "sans-serif", padding: 40, maxWidth: 1200, margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <h1 style={{ margin: 0 }}>🛠️ Admin Panel</h1>
-        <button onClick={logout} style={{ background: "#333", color: "#fff", border: "none", padding: "8px 16px", borderRadius: 6, cursor: "pointer" }}>Logout</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <a href="/seo-dashboard" style={{ background: "#6f42c1", color: "#fff", border: "none", padding: "8px 16px", borderRadius: 6, cursor: "pointer", textDecoration: "none", fontSize: 14, fontWeight: 600 }}>⚡ SEO Dashboard</a>
+          <button onClick={logout} style={{ background: "#333", color: "#fff", border: "none", padding: "8px 16px", borderRadius: 6, cursor: "pointer" }}>Logout</button>
+        </div>
       </div>
 
       {/* Tab nav */}
