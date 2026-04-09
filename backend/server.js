@@ -87,14 +87,15 @@ app.get("/rank-check", async (req, res) => {
   const { keyword, slug } = req.query;
   const GCSE_KEY = process.env.GOOGLE_CSE_KEY;
   const GCSE_CX  = process.env.GOOGLE_CSE_CX;
+  const BING_KEY = process.env.BING_SEARCH_KEY;
   const pageUrl  = `https://skyairlinetickets.com/page/${slug}`;
 
   if (!GCSE_KEY || !GCSE_CX) {
-    return res.json({ rank: null, indexed: null, error: "Google CSE not configured" });
+    return res.json({ rank: null, indexed: null, bingIndexed: null, error: "Google CSE not configured" });
   }
 
   try {
-    // Check ranking for the keyword
+    // Google: ranking check
     const rankRes = await axios.get("https://www.googleapis.com/customsearch/v1", {
       params: { key: GCSE_KEY, cx: GCSE_CX, q: keyword, num: 10 }
     });
@@ -102,15 +103,31 @@ app.get("/rank-check", async (req, res) => {
     const rankPosition = items.findIndex(item => item.link.includes(slug));
     const rank = rankPosition >= 0 ? rankPosition + 1 : null;
 
-    // Check if page is indexed via site: search
+    // Google: index check
     const indexRes = await axios.get("https://www.googleapis.com/customsearch/v1", {
       params: { key: GCSE_KEY, cx: GCSE_CX, q: `site:${pageUrl}`, num: 1 }
     });
     const indexed = (indexRes.data.searchInformation?.totalResults || "0") !== "0";
 
-    res.json({ rank, indexed });
+    // Bing: index check via Bing Web Search API
+    let bingIndexed = null;
+    if (BING_KEY) {
+      try {
+        const bingRes = await axios.get("https://api.bing.microsoft.com/v7.0/search", {
+          params: { q: `site:${pageUrl}`, count: 1 },
+          headers: { "Ocp-Apim-Subscription-Key": BING_KEY }
+        });
+        const total = bingRes.data.webPages?.totalEstimatedMatches || 0;
+        bingIndexed = total > 0;
+      } catch { bingIndexed = null; }
+    } else {
+      // Fallback: check via Bing site: link (no API key needed — just a signal)
+      bingIndexed = "no-key";
+    }
+
+    res.json({ rank, indexed, bingIndexed });
   } catch (e) {
-    res.json({ rank: null, indexed: null, error: e.message });
+    res.json({ rank: null, indexed: null, bingIndexed: null, error: e.message });
   }
 });
 

@@ -138,7 +138,8 @@ export default function Admin() {
               <th style={th}>👁 Views</th>
               <th style={th}>📞 Calls</th>
               <th style={th}>Conv %</th>
-              <th style={th}>Indexed?</th>
+              <th style={th}>🔵 Bing</th>
+              <th style={th}>🔴 Google</th>
               <th style={th}>Rank (top 10)</th>
               <th style={th}>Actions</th>
             </tr>
@@ -165,10 +166,17 @@ export default function Admin() {
                     {p.pageViews > 0 ? `${((p.callClicks || 0) / p.pageViews * 100).toFixed(1)}%` : "—"}
                   </td>
                   <td style={td}>
+                    {seo?.checking ? <span style={badge("gray")}>⏳</span>
+                      : seo?.bingIndexed === true  ? <span style={badge("green")}>✅ Yes</span>
+                      : seo?.bingIndexed === false ? <span style={badge("red")}>❌ No</span>
+                      : seo?.bingIndexed === "no-key" ? <a href={`https://www.bing.com/search?q=site:${pageUrl}`} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#008272" }}>Check ↗</a>
+                      : "—"}
+                  </td>
+                  <td style={td}>
                     {seo?.checking ? <span style={badge("gray")}>⏳ Checking…</span>
-                      : seo?.indexed === true  ? <span style={badge("green")}>✅ Indexed</span>
-                      : seo?.indexed === false ? <span style={badge("red")}>❌ Not Indexed</span>
-                      : <a href={`https://www.google.com/search?q=site:${pageUrl}`} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#0070f3" }}>Check on Google ↗</a>}
+                      : seo?.indexed === true  ? <span style={badge("green")}>✅ Yes</span>
+                      : seo?.indexed === false ? <span style={badge("red")}>❌ No</span>
+                      : <a href={`https://www.google.com/search?q=site:${pageUrl}`} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#0070f3" }}>Check ↗</a>}
                   </td>
                   <td style={td}>
                     {seo?.checking ? <span style={badge("gray")}>⏳</span>
