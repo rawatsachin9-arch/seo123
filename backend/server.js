@@ -45,31 +45,37 @@ app.delete("/page/*", async (req, res) => {
 });
 
 app.post("/generate", async (req, res) => {
-  const { airline, keyword } = req.body;
+  try {
+    const { airline, keyword } = req.body;
+    if (!airline || !keyword) return res.status(400).json({ error: "airline and keyword are required" });
 
-  const slug = `airlines/${airline.toLowerCase().replace(/\s+/g, "-")}/${keyword.replace(/\s+/g, "-")}`;
+    const slug = `airlines/${airline.toLowerCase().replace(/\s+/g, "-")}/${keyword.toLowerCase().replace(/\s+/g, "-")}`;
 
-  const existingPages = await Page.find();
+    const existing = await Page.findOne({ slug });
+    if (existing) return res.json(existing);
 
-  const aiContent = await generateContent(airline, keyword);
+    const existingPages = await Page.find({}, "airline slug");
+    const meta = `Get help with ${airline} ${keyword} — tips, steps, and FAQs.`;
 
-  const links = generateLinks(
-    { airline, slug },
-    existingPages
-  );
+    const aiContent = await generateContent(airline, keyword);
+    const links = generateLinks({ airline, slug }, existingPages);
 
-  const finalContent = `<div class="intro"><p>${page?.meta || ""}</p></div>` + aiContent + `<div class="internal-links"><h3>Related Pages</h3>${links}</div>`;
+    const finalContent = aiContent + `<div class="internal-links"><h3>Related Pages</h3>${links}</div>`;
 
-  const page = await Page.create({
-    airline,
-    keyword,
-    slug,
-    title: `${airline} ${keyword}`,
-    meta: `Get help with ${airline} ${keyword}`,
-    content: finalContent
-  });
+    const page = await Page.create({
+      airline,
+      keyword,
+      slug,
+      title: `${airline} ${keyword}`,
+      meta,
+      content: finalContent
+    });
 
-  res.json(page);
+    res.json(page);
+  } catch (e) {
+    console.error("Generate error:", e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.get("/sitemap.xml", async (req, res) => {
