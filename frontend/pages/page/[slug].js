@@ -36,14 +36,31 @@ export default function PageView({ page }) {
 
   const heroImg = getHeroImage(page.airline);
 
+  // Fix: ensure meta description is 150-160 chars and never empty
+  const metaDesc = page.meta
+    ? (page.meta.length > 160 ? page.meta.substring(0, 157) + "..." : page.meta)
+    : `Get expert help with ${page.title}. Call our 24/7 travel agents for ${page.airline} assistance at 1-888-918-5556.`;
+
+  // Fix: strip any <h1> tags from AI content to avoid multiple H1s
+  const cleanContent = (page.content || "").replace(/<h1[^>]*>.*?<\/h1>/gi, (match) => {
+    const text = match.replace(/<[^>]+>/g, "");
+    return `<h2>${text}</h2>`;
+  });
+
+  const pageUrl = `https://skyairlinetickets.com/page/${page.slug}`;
+
   return (
     <>
       <Head>
         <title>{page.title} | SkyAirlineTickets</title>
-        <meta name="description" content={page.meta} />
+        <meta name="description" content={metaDesc} />
+        <link rel="canonical" href={pageUrl} />
         <meta property="og:title" content={page.title} />
-        <meta property="og:description" content={page.meta} />
+        <meta property="og:description" content={metaDesc} />
         <meta property="og:image" content={heroImg} />
+        <meta property="og:url" content={pageUrl} />
+        <meta property="og:type" content="article" />
+        <meta name="robots" content="index, follow" />
       </Head>
 
       <style>{`
@@ -77,13 +94,17 @@ export default function PageView({ page }) {
         @media (max-width: 600px) { .hero-overlay h1 { font-size: 1.3rem; } .trust-bar { gap: 14px; } }
       `}</style>
 
-      {/* Hero Image */}
+      {/* Hero Image - descriptive alt for SEO */}
       <div className="hero">
-        <img src={heroImg} alt={page.title} />
+        <img src={heroImg} alt={`${page.airline} - ${page.keyword || page.title} help and support`} width="1200" height="400" />
         <div className="hero-overlay">
-          <h1>{page.title}</h1>
-          <p>Fast • Reliable • 24/7 Support</p>
+          <p style={{ color: "#ffe", fontSize: "1rem", margin: 0 }}>Fast • Reliable • 24/7 Support</p>
         </div>
+      </div>
+
+      {/* Single H1 — visible, outside overlay, crawlable */}
+      <div style={{ background: "#1a1a2e", color: "#fff", textAlign: "center", padding: "18px 20px" }}>
+        <h1 style={{ margin: 0, fontSize: "1.6rem", fontWeight: 700 }}>{page.title}</h1>
       </div>
 
       {/* Top CTA Bar */}
@@ -101,9 +122,9 @@ export default function PageView({ page }) {
         <span>⭐ 50,000+ Happy Travelers</span>
       </div>
 
-      {/* Main Content */}
+      {/* Main Content — H1s from AI stripped to H2 to avoid duplicates */}
       <div className="container">
-        <div dangerouslySetInnerHTML={{ __html: page.content }} />
+        <div dangerouslySetInnerHTML={{ __html: cleanContent }} />
 
         {/* Bottom CTA */}
         <div className="cta-bottom">

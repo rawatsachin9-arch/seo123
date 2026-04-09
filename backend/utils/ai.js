@@ -31,7 +31,7 @@ Return ONLY valid HTML (no markdown, no code blocks). Use this exact structure:
   <div class="faq-item"><h3>[Question 5?]</h3><p>[Answer]</p></div>
 </section>
 
-Make content 100% human-like, unique, helpful and at least 800 words total. Do NOT include <html>, <head>, <body> tags.`;
+Make content 100% human-like, unique, helpful and at least 800 words total. Do NOT include <html>, <head>, <body> tags. Do NOT use <h1> tags anywhere — use <h2> for all section headings.`;
 
   const res = await axios.post("https://api.openai.com/v1/chat/completions", {
     model: "gpt-4o-mini",
