@@ -228,11 +228,28 @@ export default function Admin() {
 
       {tab === "geo" && (
         <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <h2 style={{ margin: 0 }}>🌍 Visitor Geography</h2>
             <button onClick={loadGeo} style={{ background: "#0070f3", color: "#fff", border: "none", padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontSize: 13 }}>
               🔄 Refresh
             </button>
+          </div>
+
+          {/* Target markets */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+            {[
+              { flag: "🇺🇸", name: "USA" },
+              { flag: "🇨🇦", name: "Canada" },
+              { flag: "🇬🇧", name: "UK" },
+              { flag: "🇦🇪", name: "UAE" },
+              { flag: "🇦🇺", name: "Australia" },
+              { flag: "🇪🇺", name: "Europe" },
+            ].map(m => (
+              <span key={m.name} style={{ background: "#e8f4fd", border: "1px solid #bee3f8", borderRadius: 20, padding: "4px 14px", fontSize: 13, fontWeight: 500 }}>
+                {m.flag} {m.name}
+              </span>
+            ))}
+            <span style={{ fontSize: 12, color: "#888", alignSelf: "center", marginLeft: 4 }}>— active target markets</span>
           </div>
 
           {geoLoading && <p>Loading geo data…</p>}

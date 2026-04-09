@@ -61,6 +61,32 @@ export default function PageView({ page }) {
         <meta property="og:url" content={pageUrl} />
         <meta property="og:type" content="article" />
         <meta name="robots" content="index, follow" />
+        {/* Geo targeting — US, CA, UK, UAE, AU, Europe */}
+        <meta name="language" content="en" />
+        <meta httpEquiv="content-language" content="en-US, en-GB, en-CA, en-AU, en-AE" />
+        <meta name="geo.region" content="US, GB, CA, AU, AE" />
+        <meta name="geo.placename" content="United States, United Kingdom, Canada, Australia, UAE" />
+        {/* hreflang for target markets */}
+        <link rel="alternate" hrefLang="en-us" href={pageUrl} />
+        <link rel="alternate" hrefLang="en-gb" href={pageUrl} />
+        <link rel="alternate" hrefLang="en-ca" href={pageUrl} />
+        <link rel="alternate" hrefLang="en-au" href={pageUrl} />
+        <link rel="alternate" hrefLang="en-ae" href={pageUrl} />
+        <link rel="alternate" hrefLang="en-eu" href={pageUrl} />
+        <link rel="alternate" hrefLang="x-default" href={pageUrl} />
+        {/* JSON-LD structured data */}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Article",
+          "headline": page.title,
+          "description": metaDesc,
+          "image": heroImg,
+          "url": pageUrl,
+          "author": { "@type": "Organization", "name": "SkyAirlineTickets" },
+          "publisher": { "@type": "Organization", "name": "SkyAirlineTickets", "url": "https://skyairlinetickets.com" },
+          "audience": { "@type": "Audience", "geographicArea": { "@type": "AdministrativeArea", "name": "US, CA, GB, AU, AE, EU" } },
+          "inLanguage": "en"
+        }) }} />
       </Head>
 
       <style>{`
@@ -115,10 +141,11 @@ export default function PageView({ page }) {
 
       {/* Trust Signals */}
       <div className="trust-bar">
-        <span>✈️ All Major Airlines</span>
-        <span>🕐 24/7 Customer Support</span>
-        <span>💳 Best Price Guarantee</span>
-        <span>🔒 Secure Booking</span>
+        <span>🇺🇸 US Toll-Free Support</span>
+        <span>🇬🇧 UK Travelers Welcome</span>
+        <span>🇦🇪 UAE / Dubai Routes</span>
+        <span>🇦🇺 Australia & NZ</span>
+        <span>🕐 24/7 Live Agents</span>
         <span>⭐ 50,000+ Happy Travelers</span>
       </div>
 

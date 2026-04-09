@@ -117,13 +117,25 @@ app.post("/generate", async (req, res) => {
 
 app.get("/sitemap.xml", async (req, res) => {
   const pages = await Page.find();
+  const locales = [
+    { hreflang: "en-us", suffix: "" },
+    { hreflang: "en-gb", suffix: "" },
+    { hreflang: "en-ca", suffix: "" },
+    { hreflang: "en-au", suffix: "" },
+    { hreflang: "en-ae", suffix: "" },
+    { hreflang: "x-default", suffix: "" },
+  ];
 
-  const urls = pages.map(p =>
-    `<url><loc>https://skyairlinetickets.com/page/${p.slug}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>`
-  ).join("");
+  const urls = pages.map(p => {
+    const loc = `https://skyairlinetickets.com/page/${p.slug}`;
+    const alternates = locales.map(l =>
+      `<xhtml:link rel="alternate" hreflang="${l.hreflang}" href="${loc}" />`
+    ).join("");
+    return `<url><loc>${loc}</loc>${alternates}<changefreq>weekly</changefreq><priority>0.8</priority></url>`;
+  }).join("");
 
   res.header("Content-Type", "application/xml; charset=utf-8");
-  res.send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`);
+  res.send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">${urls}</urlset>`);
 });
 
 app.get("/rank-check", async (req, res) => {
