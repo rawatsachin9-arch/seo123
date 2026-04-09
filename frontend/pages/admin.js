@@ -52,6 +52,18 @@ export default function Admin() {
   };
 
   const [bingStatus, setBingStatus] = useState("");
+  const [tab, setTab] = useState("pages"); // "pages" | "geo"
+  const [geo, setGeo] = useState(null);
+  const [geoLoading, setGeoLoading] = useState(false);
+
+  const loadGeo = async () => {
+    setGeoLoading(true);
+    try {
+      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/geo-stats`);
+      setGeo(res.data);
+    } catch {}
+    setGeoLoading(false);
+  };
 
   const submitToBing = async () => {
     setBingStatus("submitting");
@@ -87,6 +99,18 @@ export default function Admin() {
         <h1 style={{ margin: 0 }}>🛠️ Admin Panel</h1>
         <button onClick={logout} style={{ background: "#333", color: "#fff", border: "none", padding: "8px 16px", borderRadius: 6, cursor: "pointer" }}>Logout</button>
       </div>
+
+      {/* Tab nav */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+        {["pages", "geo"].map(t => (
+          <button key={t} onClick={() => { setTab(t); if (t === "geo") loadGeo(); }}
+            style={{ padding: "8px 20px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: tab === t ? "bold" : "normal",
+              background: tab === t ? "#0070f3" : "#eee", color: tab === t ? "#fff" : "#333", fontSize: 14 }}>
+            {t === "pages" ? "📄 Pages" : "🌍 Geo Stats"}
+          </button>
+        ))}
+      </div>
+      {tab === "pages" && (<>
       <div style={{ display: "flex", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>
         {[
           { label: "Total Pages", value: pages.length, color: "#0070f3" },
@@ -200,6 +224,75 @@ export default function Admin() {
           </tbody>
         </table>
       )}
+      </>)}
+
+      {tab === "geo" && (
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <h2 style={{ margin: 0 }}>🌍 Visitor Geography</h2>
+            <button onClick={loadGeo} style={{ background: "#0070f3", color: "#fff", border: "none", padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontSize: 13 }}>
+              🔄 Refresh
+            </button>
+          </div>
+
+          {geoLoading && <p>Loading geo data…</p>}
+
+          {!geoLoading && geo && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+
+              {/* By Country */}
+              <div style={{ background: "#fff", border: "1px solid #eee", borderRadius: 10, padding: 20 }}>
+                <h3 style={{ margin: "0 0 14px", color: "#333" }}>🗺️ Top Countries</h3>
+                {geo.byCountry.length === 0 && <p style={{ color: "#999", fontSize: 13 }}>No data yet. Visits will appear here after pages are viewed.</p>}
+                {geo.byCountry.map((c, i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: "1px solid #f5f5f5" }}>
+                    <span style={{ fontSize: 14 }}>🌐 {c._id || "Unknown"}</span>
+                    <span style={badge("blue")}>{c.visits} visits</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* By City */}
+              <div style={{ background: "#fff", border: "1px solid #eee", borderRadius: 10, padding: 20 }}>
+                <h3 style={{ margin: "0 0 14px", color: "#333" }}>🏙️ Top Cities</h3>
+                {geo.byCity.length === 0 && <p style={{ color: "#999", fontSize: 13 }}>No data yet.</p>}
+                {geo.byCity.map((c, i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: "1px solid #f5f5f5" }}>
+                    <span style={{ fontSize: 14 }}>📍 {c._id.city || "Unknown"}, {c._id.country || ""}</span>
+                    <span style={badge("purple")}>{c.visits} visits</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Recent Visits */}
+              <div style={{ background: "#fff", border: "1px solid #eee", borderRadius: 10, padding: 20, gridColumn: "1 / -1" }}>
+                <h3 style={{ margin: "0 0 14px", color: "#333" }}>🕐 Recent 50 Visits</h3>
+                {geo.recent.length === 0 && <p style={{ color: "#999", fontSize: 13 }}>No visits yet.</p>}
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: "#f8f9fa" }}>
+                      <th style={th}>Page</th>
+                      <th style={th}>Country</th>
+                      <th style={th}>City</th>
+                      <th style={th}>Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {geo.recent.map((v, i) => (
+                      <tr key={i} style={{ borderBottom: "1px solid #f0f0f0" }}>
+                        <td style={{ ...td, fontSize: 11, color: "#555", maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v.slug}</td>
+                        <td style={td}>🌐 {v.country || "—"}</td>
+                        <td style={td}>📍 {v.city || "—"}</td>
+                        <td style={{ ...td, color: "#888", fontSize: 12 }}>{new Date(v.createdAt).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -207,8 +300,8 @@ export default function Admin() {
 const th = { padding: "10px 12px", fontWeight: "bold" };
 const td = { padding: "8px 12px", verticalAlign: "middle" };
 const badge = (color) => ({
-  background: color === "green" ? "#d4edda" : color === "red" ? "#f8d7da" : color === "orange" ? "#fff3cd" : "#e9ecef",
-  color: color === "green" ? "#155724" : color === "red" ? "#721c24" : color === "orange" ? "#856404" : "#555",
+  background: color === "green" ? "#d4edda" : color === "red" ? "#f8d7da" : color === "orange" ? "#fff3cd" : color === "blue" ? "#cce5ff" : color === "purple" ? "#e2d9f3" : "#e9ecef",
+  color: color === "green" ? "#155724" : color === "red" ? "#721c24" : color === "orange" ? "#856404" : color === "blue" ? "#004085" : color === "purple" ? "#4a235a" : "#555",
   padding: "2px 8px",
   borderRadius: 12,
   fontSize: 12,

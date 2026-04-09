@@ -5,6 +5,7 @@ const axios = require("axios");
 require("dotenv").config();
 
 const Page = require("./models/Page");
+const GeoVisit = require("./models/GeoVisit");
 const generateContent = require("./utils/ai");
 const generateLinks = require("./utils/internalLinks");
 
@@ -29,6 +30,19 @@ app.get("/page/*", async (req, res) => {
     { new: true }
   );
   if (!page) return res.status(404).json({ error: "Not found" });
+
+  // Log geo data from visitor IP (fire-and-forget)
+  const ip = (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim();
+  if (ip && ip !== "127.0.0.1" && ip !== "::1") {
+    axios.get(`https://ipapi.co/${ip}/json/`, { timeout: 4000 })
+      .then(g => {
+        if (g.data && !g.data.error) {
+          GeoVisit.create({ slug, country: g.data.country_name, city: g.data.city, region: g.data.region, ip });
+        }
+      })
+      .catch(() => {});
+  }
+
   res.json(page);
 });
 
@@ -36,6 +50,29 @@ app.post("/track-call/*", async (req, res) => {
   const slug = req.params[0];
   await Page.findOneAndUpdate({ slug }, { $inc: { callClicks: 1 } });
   res.json({ success: true });
+});
+
+// GET /geo-stats?slug=... (omit slug for all pages)
+app.get("/geo-stats", async (req, res) => {
+  const match = req.query.slug ? { slug: req.query.slug } : {};
+
+  const [byCountry, byCity, recent] = await Promise.all([
+    GeoVisit.aggregate([
+      { $match: match },
+      { $group: { _id: "$country", visits: { $sum: 1 } } },
+      { $sort: { visits: -1 } },
+      { $limit: 20 }
+    ]),
+    GeoVisit.aggregate([
+      { $match: match },
+      { $group: { _id: { city: "$city", country: "$country" }, visits: { $sum: 1 } } },
+      { $sort: { visits: -1 } },
+      { $limit: 20 }
+    ]),
+    GeoVisit.find(match).sort({ createdAt: -1 }).limit(50).select("slug country city createdAt -_id")
+  ]);
+
+  res.json({ byCountry, byCity, recent });
 });
 
 app.delete("/page/*", async (req, res) => {
