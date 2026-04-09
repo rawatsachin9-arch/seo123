@@ -212,6 +212,7 @@ app.post("/indexnow", async (req, res) => {
 });
 
 app.post("/generate-all", async (req, res) => {
+  const { country = "United States", city = null } = req.body;
   const airlines = require("../data/airlines.json");
   const keywords = require("../data/keywords.json");
 
@@ -226,8 +227,9 @@ app.post("/generate-all", async (req, res) => {
 
   if (pairs.length === 0) return res.json({ message: "All pages already exist", generated: 0 });
 
-  // respond immediately, generate in background
-  res.json({ message: `Queued ${pairs.length} pages for generation`, total: pairs.length });
+  const targetCity = city || (country === "United States" ? "New York" : country === "United Kingdom" ? "London" : country === "UAE" ? "Dubai" : country === "Australia" ? "Sydney" : country === "Canada" ? "Toronto" : "Berlin");
+
+  res.json({ message: `Queued ${pairs.length} pages for ${targetCity}, ${country}`, total: pairs.length });
 
   (async () => {
     const generateLinks = require("./utils/internalLinks");
@@ -235,8 +237,8 @@ app.post("/generate-all", async (req, res) => {
     for (const { airline, keyword, slug } of pairs) {
       try {
         const existingPages = await Page.find({}, "airline slug");
-        const meta = `Get help with ${airline} ${keyword} — tips, steps, and FAQs.`;
-        const aiContent = await generateContent(airline, keyword);
+        const meta = `Get help with ${airline} ${keyword} in ${targetCity}, ${country} — tips, steps, and FAQs.`;
+        const aiContent = await generateContent(airline, keyword, country, targetCity);
         const links = generateLinks({ airline, slug }, existingPages);
         await Page.create({
           airline, keyword, slug,
@@ -244,7 +246,7 @@ app.post("/generate-all", async (req, res) => {
           meta, content: aiContent + `<div class="internal-links"><h3>Related Pages</h3>${links}</div>`
         });
         done++;
-        console.log(`Bulk [${done}/${pairs.length}]: ${slug}`);
+        console.log(`Bulk [${done}/${pairs.length}]: ${slug} (${targetCity}, ${country})`);
       } catch (e) {
         console.error(`Bulk failed ${slug}:`, e.message);
       }
