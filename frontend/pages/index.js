@@ -6,6 +6,7 @@ export default function Home() {
   const [airline, setAirline] = useState("");
   const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [bulkLoading, setBulkLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -38,6 +39,23 @@ export default function Home() {
     }
   };
 
+  const generateAll = async () => {
+    setBulkLoading(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/generate-all`);
+      setSuccess(`🚀 ${res.data.message} — pages will appear as they finish generating.`);
+      // poll for new pages every 10s
+      const poll = setInterval(() => load(), 10000);
+      setTimeout(() => clearInterval(poll), 300000); // stop polling after 5 min
+    } catch (e) {
+      setError(`❌ ${e.response?.data?.error || e.message}`);
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
   useEffect(() => { load(); }, []);
 
   return (
@@ -63,6 +81,13 @@ export default function Home() {
           style={{ padding: "8px 20px", fontSize: 15, background: loading ? "#aaa" : "#0070f3", color: "#fff", border: "none", borderRadius: 4, cursor: loading ? "not-allowed" : "pointer" }}
         >
           {loading ? "Generating…" : "Generate"}
+        </button>
+        <button
+          onClick={generateAll}
+          disabled={bulkLoading}
+          style={{ padding: "8px 20px", fontSize: 15, background: bulkLoading ? "#aaa" : "#28a745", color: "#fff", border: "none", borderRadius: 4, cursor: bulkLoading ? "not-allowed" : "pointer" }}
+        >
+          {bulkLoading ? "Queuing…" : "⚡ Generate All (100 pages)"}
         </button>
       </div>
 

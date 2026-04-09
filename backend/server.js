@@ -162,6 +162,49 @@ app.post("/indexnow", async (req, res) => {
   }
 });
 
+app.post("/generate-all", async (req, res) => {
+  const airlines = require("../data/airlines.json");
+  const keywords = require("../data/keywords.json");
+
+  const pairs = [];
+  for (const airline of airlines) {
+    for (const keyword of keywords) {
+      const slug = `airlines/${airline.toLowerCase().replace(/\s+/g, "-")}/${keyword.toLowerCase().replace(/\s+/g, "-")}`;
+      const exists = await Page.findOne({ slug });
+      if (!exists) pairs.push({ airline, keyword, slug });
+    }
+  }
+
+  if (pairs.length === 0) return res.json({ message: "All pages already exist", generated: 0 });
+
+  // respond immediately, generate in background
+  res.json({ message: `Queued ${pairs.length} pages for generation`, total: pairs.length });
+
+  (async () => {
+    const generateLinks = require("./utils/internalLinks");
+    let done = 0;
+    for (const { airline, keyword, slug } of pairs) {
+      try {
+        const existingPages = await Page.find({}, "airline slug");
+        const meta = `Get help with ${airline} ${keyword} — tips, steps, and FAQs.`;
+        const aiContent = await generateContent(airline, keyword);
+        const links = generateLinks({ airline, slug }, existingPages);
+        await Page.create({
+          airline, keyword, slug,
+          title: `${airline} ${keyword}`,
+          meta, content: aiContent + `<div class="internal-links"><h3>Related Pages</h3>${links}</div>`
+        });
+        done++;
+        console.log(`Bulk [${done}/${pairs.length}]: ${slug}`);
+      } catch (e) {
+        console.error(`Bulk failed ${slug}:`, e.message);
+      }
+      await new Promise(r => setTimeout(r, 3000));
+    }
+    console.log(`Bulk generation complete: ${done}/${pairs.length}`);
+  })();
+});
+
 app.post("/login", (req, res) => {
   const { email, password } = req.body;
   const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "rawatsachin9@gmail.com";

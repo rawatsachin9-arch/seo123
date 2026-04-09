@@ -1,7 +1,6 @@
 const mongoose = require("mongoose");
 require("dotenv").config({ path: "../backend/.env" });
 
-// Use worker's own mongoose instance for the model
 const { Schema } = mongoose;
 const PageSchema = new Schema({
   airline: String,
@@ -9,52 +8,58 @@ const PageSchema = new Schema({
   slug: { type: String, unique: true },
   title: String,
   meta: String,
-  content: String
+  content: String,
+  callClicks: { type: Number, default: 0 },
+  pageViews: { type: Number, default: 0 }
 }, { timestamps: true });
 const Page = mongoose.models.Page || mongoose.model("Page", PageSchema);
 
 const generateContent = require("../backend/utils/ai");
-const generateVariations = require("../backend/utils/variations");
+const generateLinks = require("../backend/utils/internalLinks");
+
+const airlines = require("../data/airlines.json");
+const keywords = require("../data/keywords.json");
 
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected"))
   .catch(err => { console.error("MongoDB error:", err); process.exit(1); });
 
-const airlines = ["Delta Airlines", "United Airlines", "American Airlines"];
-const keywords = [
-  "change flight",
-  "cancel booking",
-  "customer service",
-  "name correction"
-];
-
 async function run() {
-  for (let airline of airlines) {
-    for (let keyword of keywords) {
-      const variations = generateVariations(airline, keyword);
+  let generated = 0;
+  let skipped = 0;
 
-      for (let v of variations) {
-        const slug = v.replace(/\s+/g, "-").toLowerCase();
+  for (const airline of airlines) {
+    for (const keyword of keywords) {
+      const slug = `airlines/${airline.toLowerCase().replace(/\s+/g, "-")}/${keyword.toLowerCase().replace(/\s+/g, "-")}`;
 
-        const exists = await Page.findOne({ slug });
-        if (exists) continue;
+      const exists = await Page.findOne({ slug });
+      if (exists) { skipped++; continue; }
 
-        console.log("Generating:", slug);
+      console.log(`[${generated + 1}] Generating: ${slug}`);
 
-        const content = await generateContent(airline, v);
+      try {
+        const existingPages = await Page.find({}, "airline slug");
+        const meta = `Get help with ${airline} ${keyword} — tips, steps, and FAQs.`;
+        const aiContent = await generateContent(airline, keyword);
+        const links = generateLinks({ airline, slug }, existingPages);
+        const finalContent = aiContent + `<div class="internal-links"><h3>Related Pages</h3>${links}</div>`;
 
         await Page.create({
           airline,
-          keyword: v,
+          keyword,
           slug,
-          title: v,
-          meta: `Get help with ${airline}`,
-          content
+          title: `${airline} ${keyword}`,
+          meta,
+          content: finalContent
         });
 
-        // delay (IMPORTANT)
-        await new Promise(r => setTimeout(r, 2000));
+        generated++;
+        console.log(`  ✅ Done (${generated} generated, ${skipped} skipped)`);
+      } catch (e) {
+        console.error(`  ❌ Failed: ${e.message}`);
       }
+
+      await new Promise(r => setTimeout(r, 3000));
     }
   }
 
