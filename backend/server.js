@@ -22,25 +22,33 @@ app.get("/pages", async (req,res)=>{
   res.json(pages);
 });
 
+// Known bot UA patterns
+const BOT_PATTERN = /bot|crawl|spider|slurp|mediapartners|facebookexternalhit|whatsapp|telegram|preview|headless|python|curl|wget|axios|java|go-http|okhttp|apachebench/i;
+
 app.get("/page/*", async (req, res) => {
   const slug = req.params[0];
+  const ua = req.headers["user-agent"] || "";
+  const isBot = BOT_PATTERN.test(ua);
+
   const page = await Page.findOneAndUpdate(
     { slug },
-    { $inc: { pageViews: 1 } },
+    { $inc: { pageViews: 1, ...(isBot ? { botViews: 1 } : { humanViews: 1 }) } },
     { new: true }
   );
   if (!page) return res.status(404).json({ error: "Not found" });
 
-  // Log geo data from visitor IP (fire-and-forget)
-  const ip = (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim();
-  if (ip && ip !== "127.0.0.1" && ip !== "::1") {
-    axios.get(`https://ipapi.co/${ip}/json/`, { timeout: 4000 })
-      .then(g => {
-        if (g.data && !g.data.error) {
-          GeoVisit.create({ slug, country: g.data.country_name, city: g.data.city, region: g.data.region, ip });
-        }
-      })
-      .catch(() => {});
+  // Log geo only for humans
+  if (!isBot) {
+    const ip = (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim();
+    if (ip && ip !== "127.0.0.1" && ip !== "::1") {
+      axios.get(`https://ipapi.co/${ip}/json/`, { timeout: 4000 })
+        .then(g => {
+          if (g.data && !g.data.error) {
+            GeoVisit.create({ slug, country: g.data.country_name, city: g.data.city, region: g.data.region, ip });
+          }
+        })
+        .catch(() => {});
+    }
   }
 
   res.json(page);

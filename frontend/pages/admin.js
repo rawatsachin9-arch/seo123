@@ -117,9 +117,10 @@ export default function Admin() {
       <div style={{ display: "flex", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>
         {[
           { label: "Total Pages", value: pages.length, color: "#0070f3" },
-          { label: "Total Views", value: pages.reduce((s, p) => s + (p.pageViews || 0), 0), color: "#6f42c1" },
+          { label: "👤 Human Views", value: pages.reduce((s, p) => s + (p.humanViews || 0), 0), color: "#28a745" },
+          { label: "🤖 Bot Views", value: pages.reduce((s, p) => s + (p.botViews || 0), 0), color: "#888" },
           { label: "Total Calls", value: pages.reduce((s, p) => s + (p.callClicks || 0), 0), color: "#cc0000" },
-          { label: "Avg Conv %", value: (() => { const v = pages.reduce((s,p)=>s+(p.pageViews||0),0); const c = pages.reduce((s,p)=>s+(p.callClicks||0),0); return v > 0 ? (c/v*100).toFixed(1)+"%" : "—"; })(), color: "#28a745" },
+          { label: "Conv % (human)", value: (() => { const v = pages.reduce((s,p)=>s+(p.humanViews||0),0); const c = pages.reduce((s,p)=>s+(p.callClicks||0),0); return v > 0 ? (c/v*100).toFixed(1)+"%" : "—"; })(), color: "#6f42c1" },
         ].map(s => (
           <div key={s.label} style={{ background: "#fff", border: `2px solid ${s.color}`, borderRadius: 10, padding: "14px 24px", minWidth: 130, textAlign: "center" }}>
             <div style={{ fontSize: 22, fontWeight: "bold", color: s.color }}>{s.value}</div>
@@ -162,12 +163,13 @@ export default function Admin() {
               <th style={th}>#</th>
               <th style={th}>Title</th>
               <th style={th}>Airline</th>
-              <th style={th}>👁 Views</th>
+              <th style={th}>👤 Human</th>
+              <th style={th}>🤖 Bot</th>
               <th style={th}>📞 Calls</th>
               <th style={th}>Conv %</th>
               <th style={th}>🔵 Bing</th>
               <th style={th}>🔴 Google</th>
-              <th style={th}>Rank (top 10)</th>
+              <th style={th}>Rank</th>
               <th style={th}>Actions</th>
             </tr>
           </thead>
@@ -184,13 +186,16 @@ export default function Admin() {
                   </td>
                   <td style={td}>{p.airline}</td>
                   <td style={{ ...td, textAlign: "center" }}>
-                    <span style={badge("gray")}>{p.pageViews || 0}</span>
+                    <span style={badge((p.humanViews||0) > 0 ? "green" : "gray")}>{p.humanViews || 0}</span>
+                  </td>
+                  <td style={{ ...td, textAlign: "center" }}>
+                    <span style={badge("gray")}>{p.botViews || 0}</span>
                   </td>
                   <td style={{ ...td, textAlign: "center" }}>
                     <span style={badge(p.callClicks > 0 ? "green" : "gray")}>{p.callClicks || 0}</span>
                   </td>
                   <td style={{ ...td, textAlign: "center", fontSize: 12 }}>
-                    {p.pageViews > 0 ? `${((p.callClicks || 0) / p.pageViews * 100).toFixed(1)}%` : "—"}
+                    {(p.humanViews||0) > 0 ? `${((p.callClicks || 0) / (p.humanViews||1) * 100).toFixed(1)}%` : "—"}
                   </td>
                   <td style={td}>
                     {seo?.checking ? <span style={badge("gray")}>⏳</span>

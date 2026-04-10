@@ -9,6 +9,8 @@ const PageSchema = new mongoose.Schema({
   content:String,
   callClicks: { type: Number, default: 0 },
   pageViews:  { type: Number, default: 0 },
+  humanViews: { type: Number, default: 0 },
+  botViews:   { type: Number, default: 0 },
 },{timestamps:true});
 
 module.exports = mongoose.model("Page", PageSchema);
